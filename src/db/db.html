@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Project Samarth — Demo Interface</title>
+
+  <!-- Chart.js for simple charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root{
+      --bg:#0b2540;
+      --card:#0f3a5a;
+      --muted:#cbd5e1;
+      --accent:#ff9f1c;
+      --glass: rgba(255,255,255,0.03);
+      --radius:12px;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#062034 0%, #0b2540 100%);color:var(--muted);}
+    .container{max-width:1100px;margin:28px auto;padding:20px;}
+    .header{display:flex;gap:16px;align-items:center;margin-bottom:18px}
+    .title{font-size:28px;color:#fff;font-weight:700}
+    .subtitle{color:var(--muted);font-size:13px}
+    .layout{display:grid;grid-template-columns: 1fr 380px;gap:18px;}
+    .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:0 6px 18px rgba(0,0,0,0.35)}
+    .chat-area{display:flex;flex-direction:column;height:72vh;}
+    .messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));}
+    .msg{max-width:78%;padding:10px;border-radius:10px;line-height:1.4;}
+    .msg.user{align-self:flex-end;background:linear-gradient(90deg, #183e59, #245b7a);color:#fff}
+    .msg.bot{align-self:flex-start;background:linear-gradient(90deg,#0f2a3f, #123e55);color:var(--muted);border:1px solid rgba(255,255,255,0.02)}
+    .input-row{display:flex;gap:8px;margin-top:12px}
+    textarea#question{flex:1;min-height:54px;max-height:140px;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:var(--muted);resize:vertical}
+    button#askBtn{background:var(--accent);color:#062034;border:none;padding:10px 14px;border-radius:10px;font-weight:600;cursor:pointer}
+    .side{display:flex;flex-direction:column;gap:12px;height:72vh}
+    .panel{padding:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+    input.editable{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--muted)}
+    .small{font-size:13px;color:var(--muted)}
+    .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .chip{background:#0d3550;padding:6px 8px;border-radius:8px;font-size:13px}
+    .expand{margin-top:10px;color:var(--muted);font-size:13px;cursor:pointer}
+    pre{background:rgba(0,0,0,0.18);padding:10px;border-radius:8px;color:#dbe7f5;overflow:auto;font-size:13px}
+    .sources a{color:var(--accent);text-decoration:none;}
+    footer{margin-top:22px;color:#8ea6bf;font-size:13px;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <div class="title">Project Samarth</div>
+        <div class="subtitle">Intelligent Q&A for agriculture & climate — demo interface</div>
+      </div>
+      <div style="margin-left:auto" class="small">Demo: local frontend — connect backend via API_URL in script</div>
+    </div>
+
+    <div class="layout">
+      <!-- Left: Chat -->
+      <div class="card chat-area" aria-live="polite">
+        <div class="messages" id="messages">
+          <!-- messages shown here -->
+          <div class="msg bot">
+            Hi — ask a question like: “Compare average rainfall in Maharashtra and Karnataka for the last 5 years.”
+          </div>
+        </div>
+
+        <div style="margin-top:10px" class="small">Parsed entities — edit if needed (state names, crop, years)</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input id="stateA" class="editable" placeholder="State A (e.g. Maharashtra)" />
+          <input id="stateB" class="editable" placeholder="State B (e.g. Karnataka)" />
+          <input id="years" class="editable" placeholder="Years (e.g. 5)" style="width:80px" />
+        </div>
+
+        <div class="input-row">
+          <textarea id="question" placeholder="Type your question here..."></textarea>
+          <button id="askBtn">Ask</button>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+          <div class="small">Show SQL</div><input id="showSql" type="checkbox" />
+        </div>
+
+      </div>
+
+      <!-- Right: Panels -->
+      <div class="side">
+        <div class="panel" style="flex:0 0 auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:700;color:#fff">Answer</div>
+            <div class="small">Traceable results with sources</div>
+          </div>
+          <div id="answerArea" style="margin-top:10px">
+            <div class="small">No answer yet. Ask a question to begin.</div>
+          </div>
+
+          <div class="expand" id="toggleSources">Show sources ▾</div>
+          <div id="sourcesPanel" style="display:none;margin-top:8px" class="sources">
+            <!-- sources appended here -->
+          </div>
+        </div>
+
+        <div class="panel" style="flex:1 1 auto;display:flex;flex-direction:column;gap:8px">
+          <div style="font-weight:700;color:#fff">Results / Chart</div>
+          <canvas id="resultChart" style="max-height:220px"></canvas>
+          <div id="rawTable" style="margin-top:6px"></div>
+        </div>
+
+        <div class="panel">
+          <div style="font-weight:700;color:#fff">Execution</div>
+          <div class="small">SQL executed (visible if checked)</div>
+          <pre id="sqlBlock" style="display:none"></pre>
+          <div style="margin-top:8px" class="small">Method notes: Aggregation done in Python/SQL and synthesis formatted by LLM.</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>Project Samarth • Demo interface • © Ashik Khan</footer>
+  </div>
+
+  <script>
+    // === CONFIG: set this to your backend endpoint ===
+    // If you run the FastAPI/Flask backend from previous steps, point API_URL to it.
+    // Example: const API_URL = "http://127.0.0.1:8000/ask"
+    const API_URL = ""; // leave empty to use a local mock response for the demo
+
+    // DOM refs
+    const messagesEl = document.getElementById("messages");
+    const questionEl = document.getElementById("question");
+    const askBtn = document.getElementById("askBtn");
+    const answerArea = document.getElementById("answerArea");
+    const sourcesPanel = document.getElementById("sourcesPanel");
+    const toggleSources = document.getElementById("toggleSources");
+    const resultChartCtx = document.getElementById("resultChart").getContext('2d');
+    const rawTable = document.getElementById("rawTable");
+    const sqlBlock = document.getElementById("sqlBlock");
+    const showSql = document.getElementById("showSql");
+
+    toggleSources.onclick = () => {
+      if (sourcesPanel.style.display === "none") {
+        sourcesPanel.style.display = "block";
+        toggleSources.textContent = "Hide sources ▴";
+      } else {
+        sourcesPanel.style.display = "none";
+        toggleSources.textContent = "Show sources ▾";
+      }
+    };
+
+    showSql.onchange = () => {
+      sqlBlock.style.display = showSql.checked ? "block" : "none";
+    };
+
+    // Basic chart instance (empty initially)
+    let chart = new Chart(resultChartCtx, {
+      type: 'bar',
+      data: { labels: [], datasets: [{ label: 'Value', data: [] }] },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    function appendMessage(text, cls='bot') {
+      const el = document.createElement("div");
+      el.className = `msg ${cls}`;
+      el.innerHTML = text;
+      messagesEl.appendChild(el);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function renderAnswer(answerText) {
+      answerArea.innerHTML = `<div style="color:#dbe7f5">${answerText}</div>`;
+    }
+
+    function renderSources(sources) {
+      if (!sources || sources.length === 0) {
+        sourcesPanel.innerHTML = `<div class="small">No sources provided.</div>`;
+        return;
+      }
+      sourcesPanel.innerHTML = "";
+      sources.forEach(s => {
+        const div = document.createElement("div");
+        div.innerHTML = `<div style="font-weight:600">${s.title || s.source || "Dataset"}</div>
+                         <div class="small">${s.desc || ""}</div>
+                         <div class="small"><a href="${s.url}" target="_blank">${s.url}</a></div>
+                         <hr style="opacity:0.06"/>`;
+        sourcesPanel.appendChild(div);
+      });
+    }
+
+    function renderChartFromComparison(rows) {
+      // rows: [{state: 'X', avg_mm: 300}, {state: 'Y', avg_mm: 400}]
+      if (!rows || rows.length === 0) {
+        chart.data.labels = [];
+        chart.data.datasets[0].data = [];
+        chart.update();
+        rawTable.innerHTML = "";
+        return;
+      }
+      const labels = rows.map(r=>r.state || r.state_name || r.stateName || r.name);
+      const data = rows.map(r=>Number(r.avg_mm ?? r.value ?? 0));
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = data;
+      chart.data.datasets[0].label = rows[0].metric || 'Value';
+      chart.update();
+
+      // simple raw table
+      rawTable.innerHTML = `<table style="width:100%;font-size:13px;color:var(--muted)"><thead><tr><th>Entity</th><th>Value</th></tr></thead>
+        <tbody>${labels.map((l,i)=>`<tr><td>${l}</td><td>${data[i]}</td></tr>`).join('')}</tbody></table>`;
+    }
+
+    // Fallback mock runner when API_URL is not set
+    async function getMockResponse(question, parsed) {
+      // simple heuristics to demonstrate features
+      const sA = parsed.states[0] || document.getElementById("stateA").value || "Karnataka";
+      const sB = parsed.states[1] || document.getElementById("stateB").value || "Maharashtra";
+      const years = parsed.years || Number(document.getElementById("years").value) || 5;
+
+      // mock numeric results
+      const rows = [
+        { state: sA, avg_mm: Math.round(200 + Math.random()*200), metric: "avg_annual_rainfall" },
+        { state: sB, avg_mm: Math.round(250 + Math.random()*200), metric: "avg_annual_rainfall" }
+      ];
+
+      // mock top crops
+      const topA = [
+        {crop:"Rice", production: 12000},
+        {crop:"Wheat", production: 8000},
+        {crop:"Maize", production: 4000}
+      ];
+      const topB = [
+        {crop:"Sugarcane", production: 15000},
+        {crop:"Rice", production: 9000},
+        {crop:"Cotton", production: 5000}
+      ];
+
+      // mock provenance
+      const sources = [
+        {title:"Crop Production - sample", url:"https://data.gov.in/dataset/crop_sample", desc:"District-level crop production"},
+        {title:"IMD Rainfall - sample", url:"https://data.gov.in/dataset/rainfall_sample", desc:"Monthly rainfall aggregates"}
+      ];
+
+      const answerText = `Between ${sA} and ${sB} for the last ${years} years, ${sB} shows higher average annual rainfall (${rows[1].avg_mm} mm) than ${sA} (${rows[0].avg_mm} mm). Top crops (by volume) for ${sA}: ${topA.slice(0,3).map(t=>t.crop).join(', ')}. For ${sB}: ${topB.slice(0,3).map(t=>t.crop).join(', ')}. Sources are listed below.`;
+
+      // mock SQL for display
+      const mockSql = `
+-- avg annual rainfall last ${years} years
+SELECT state, AVG(total_mm) as avg_mm
+FROM fact_rainfall
+WHERE year >= (SELECT MAX(year) - ${years} + 1 FROM fact_rainfall)
+  AND state IN ('${sA}','${sB}')
+GROUP BY state;
+      `;
+
+      return {answerText, rows, topA, topB, sources, sql: mockSql};
+    }
+
+    // parse question quickly (lightweight on client)
+    function parseQuestionSimple(q) {
+      q = q || "";
+      const yearsMatch = q.match(/last\s+(\d+)\s+years/i);
+      const years = yearsMatch ? Number(yearsMatch[1]) : Number(document.getElementById("years").value) || 5;
+      // naive state extraction: look for known things or fallback to inputs
+      const stateA = document.getElementById("stateA").value || (q.match(/(Karnataka|Maharashtra|Gujarat|Bihar|Kerala|Punjab|Rajasthan)/i)||[])[0];
+      const stateB = document.getElementById("stateB").value || (q.match(/and\s+([A-Z][a-z]+)/i) || [])[1];
+      return {states: [stateA || "Karnataka", stateB || "Maharashtra"], years};
+    }
+
+    async function askQuestion() {
+      const q = questionEl.value.trim();
+      if (!q) return;
+      // add user message
+      appendMessage(`<strong>You:</strong> ${escapeHtml(q)}`, 'user');
+
+      // parse and fill inputs
+      const parsed = parseQuestionSimple(q);
+      if (parsed.states[0]) document.getElementById("stateA").value = parsed.states[0];
+      if (parsed.states[1]) document.getElementById("stateB").value = parsed.states[1];
+      document.getElementById("years").value = parsed.years;
+
+      // show a loading bot message
+      const loadingId = `loading-${Date.now()}`;
+      appendMessage(`<span id="${loadingId}">Working... </span>`, 'bot');
+
+      try {
+        let response;
+        if (API_URL && API_URL.length > 3) {
+          // call backend (expected JSON: {answer: "...", results: {...}, provenance: [...]})
+          const res = await fetch(API_URL, {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({question: q, params: {stateA: parsed.states[0], stateB: parsed.states[1], years: parsed.years}})
+          });
+          if (!res.ok) throw new Error(`Server returned ${res.status}`);
+          response = await res.json();
+          // map to fields for UI
+          const answerText = response.answer || response.text || "No answer text returned";
+          const results = response.results || response.rows || [];
+          const sources = response.provenance || response.sources || [];
+          const sql = response.sql || response.executed_sql || "";
+          // show
+          document.getElementById(loadingId).parentElement.remove();
+          appendMessage(`<strong>Samarth:</strong> ${escapeHtml(answerText)}`, 'bot');
+          renderAnswer(answerText);
+          renderSources(sources);
+          renderChartFromComparison(Array.isArray(results) ? results : []);
+          sqlBlock.textContent = sql;
+          sqlBlock.style.display = showSql.checked ? "block" : "none";
+        } else {
+          // use mock
+          const mock = await getMockResponse(q, parsed);
+          document.getElementById(loadingId).parentElement.remove();
+          appendMessage(`<strong>Samarth:</strong> ${escapeHtml(mock.answerText)}`, 'bot');
+          renderAnswer(mock.answerText);
+          renderSources(mock.sources);
+          renderChartFromComparison(mock.rows);
+          sqlBlock.textContent = mock.sql;
+          sqlBlock.style.display = showSql.checked ? "block" : "none";
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById(loadingId).parentElement.remove();
+        appendMessage(`<strong>Samarth:</strong> Sorry, an error occurred: ${escapeHtml(err.message || String(err))}`, 'bot');
+      }
+    }
+
+    askBtn.addEventListener("click", askQuestion);
+    questionEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { // Ctrl+Enter to send
+        askQuestion();
+      }
+    });
+
+    // small helper
+    function escapeHtml(unsafe) {
+      return (unsafe || "").replace(/[&<"'>]/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"}[m]));
+    }
+  </script>
+</body>
+</html>

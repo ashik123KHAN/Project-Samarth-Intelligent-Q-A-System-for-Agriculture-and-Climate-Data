@@ -1,0 +1,4 @@
+state,district,crop,year,season,area_hectares,production_tonnes,source_url,row_id
+Karnataka,Bengaluru Urban,Rice,2019,Kharif,1000,3000,https://data.gov.in/dataset/crop_2019,1
+Karnataka,Bengaluru Urban,Wheat,2019,Rabi,200,400,https://data.gov.in/dataset/crop_2019,2
+Maharashtra,Pune,Rice,2019,Kharif,2000,5000,https://data.gov.in/dataset/crop_2019,3

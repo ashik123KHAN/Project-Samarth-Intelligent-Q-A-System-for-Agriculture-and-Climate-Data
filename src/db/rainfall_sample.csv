@@ -1,0 +1,4 @@
+state,district,year,month,total_mm,source_url,row_id
+Karnataka,Bengaluru Urban,2019,7,250,https://data.gov.in/dataset/rainfall_2019,1
+Karnataka,Bengaluru Urban,2019,8,300,https://data.gov.in/dataset/rainfall_2019,2
+Maharashtra,Pune,2019,7,400,https://data.gov.in/dataset/rainfall_2019,3
